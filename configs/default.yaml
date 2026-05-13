@@ -9,7 +9,7 @@ providers:
     cost_per_1k_tokens: 0.006
 circuit_breaker:
   failure_threshold: 3
-  reset_timeout_seconds: 2
+  reset_timeout_seconds: 0.5
   success_threshold: 1
 cache:
   enabled: true
@@ -18,19 +18,23 @@ cache:
   similarity_threshold: 0.92
   redis_url: "redis://localhost:6379/0"
 load_test:
-  requests: 100
+  requests: 200
+  concurrency: 10
 
-# Chaos scenarios: each overrides provider fail_rate for targeted testing.
-# TODO(student): Add more scenarios or tweak these.
 scenarios:
   - name: primary_timeout_100
-    description: "Primary provider fails 100% — all traffic should fallback"
+    description: "Primary fails 100% — all traffic must fall back to backup."
     provider_overrides:
       primary: 1.0
   - name: primary_flaky_50
-    description: "Primary provider fails 50% — circuit should oscillate"
+    description: "Primary fails 50% — circuit should oscillate between OPEN and CLOSED."
     provider_overrides:
       primary: 0.5
   - name: all_healthy
-    description: "Baseline — both providers healthy"
+    description: "Baseline — both providers healthy (zero fail rate)."
+    provider_overrides:
+      primary: 0.0
+      backup: 0.0
+  - name: cache_stale_candidate
+    description: "Different-year queries must not produce false cache hits."
     provider_overrides: {}
