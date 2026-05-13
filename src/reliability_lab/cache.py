@@ -28,6 +28,21 @@ def _looks_like_false_hit(query: str, cached_key: str) -> bool:
     return bool(nums_q and nums_c and nums_q != nums_c)
 
 
+def _normalize_query(s: str) -> str:
+    return re.sub(r"\s+", " ", re.sub(r"[^\w\s]", " ", s.lower())).strip()
+
+
+def _trigrams(s: str) -> set[str]:
+    s = f"  {s}  "
+    return {s[i : i + 3] for i in range(len(s) - 2)}
+
+
+def _jaccard(a: set[str], b: set[str]) -> float:
+    if not a or not b:
+        return 0.0
+    return len(a & b) / len(a | b)
+
+
 # ---------------------------------------------------------------------------
 # In-memory cache (existing)
 # ---------------------------------------------------------------------------
@@ -42,46 +57,56 @@ class CacheEntry:
 
 
 class ResponseCache:
-    """Simple in-memory cache skeleton.
-
-    TODO(student): Add a better semantic similarity function and false-hit guardrails.
-    Use the module-level _is_uncacheable() and _looks_like_false_hit() helpers in your
-    get() and set() methods.  For production, replace with SharedRedisCache.
-    """
+    """In-memory cache with hybrid similarity + privacy and false-hit guardrails."""
 
     def __init__(self, ttl_seconds: int, similarity_threshold: float):
         self.ttl_seconds = ttl_seconds
         self.similarity_threshold = similarity_threshold
         self._entries: list[CacheEntry] = []
+        self.false_hit_log: list[dict[str, object]] = []
 
     def get(self, query: str) -> tuple[str | None, float]:
-        best_value: str | None = None
-        best_score = 0.0
+        if _is_uncacheable(query):
+            return None, 0.0
         now = time.time()
         self._entries = [e for e in self._entries if now - e.created_at <= self.ttl_seconds]
+
+        best_value: str | None = None
+        best_score = 0.0
+        best_key: str | None = None
         for entry in self._entries:
             score = self.similarity(query, entry.key)
             if score > best_score:
                 best_score = score
                 best_value = entry.value
-        if best_score >= self.similarity_threshold:
+                best_key = entry.key
+
+        if best_score >= self.similarity_threshold and best_key is not None:
+            if _looks_like_false_hit(query, best_key):
+                self.false_hit_log.append(
+                    {"query": query, "matched": best_key, "score": best_score}
+                )
+                return None, best_score
             return best_value, best_score
         return None, best_score
 
     def set(self, query: str, value: str, metadata: dict[str, str] | None = None) -> None:
+        if _is_uncacheable(query):
+            return
         self._entries.append(CacheEntry(query, value, time.time(), metadata or {}))
 
     @staticmethod
     def similarity(a: str, b: str) -> float:
-        """Very small baseline similarity using token overlap.
-
-        TODO(student): Improve with embeddings or a deterministic vectorizer.
-        """
-        left = set(a.lower().split())
-        right = set(b.lower().split())
-        if not left or not right:
+        """Hybrid: exact-match fast path, then 0.6*token-Jaccard + 0.4*trigram-Jaccard."""
+        na = _normalize_query(a)
+        nb = _normalize_query(b)
+        if not na or not nb:
             return 0.0
-        return len(left & right) / len(left | right)
+        if na == nb:
+            return 1.0
+        token_score = _jaccard(set(na.split()), set(nb.split()))
+        trigram_score = _jaccard(_trigrams(na), _trigrams(nb))
+        return 0.6 * token_score + 0.4 * trigram_score
 
 
 # ---------------------------------------------------------------------------
