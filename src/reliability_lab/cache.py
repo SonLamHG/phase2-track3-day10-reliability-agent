@@ -118,22 +118,14 @@ class ResponseCache:
 class SharedRedisCache:
     """Redis-backed shared cache for multi-instance deployments.
 
-    TODO(student): Implement the get() and set() methods using Redis commands
-    so that cache state is shared across multiple gateway instances.
-
-    Data model (suggested):
+    Data model:
         Key    = "{prefix}{query_hash}"   (Redis String namespace)
         Value  = Redis Hash with fields:  "query", "response"
         TTL    = Redis EXPIRE (automatic cleanup — no manual eviction)
 
-    For similarity lookup: SCAN all keys with self.prefix, HGET each entry's
-    "query" field, compute similarity locally via ResponseCache.similarity().
-
-    Provided helpers:
-        _is_uncacheable(query)          — True if privacy-sensitive
-        _looks_like_false_hit(q, key)   — True if 4-digit numbers differ
-        self._query_hash(query)         — deterministic short hash for Redis key
-        ResponseCache.similarity(a, b)  — reuse your improved similarity function
+    Similarity lookup SCANs all keys with self.prefix, HGETs each entry's
+    "query" field, and computes similarity locally via ResponseCache.similarity().
+    The same privacy and false-hit guardrails as ResponseCache apply.
     """
 
     def __init__(

@@ -99,6 +99,14 @@ def _metrics_table(metrics: dict) -> list[str]:
     rows = ["| Metric | Value |", "|---|---:|"]
     for k in keys:
         rows.append(f"| {k} | {metrics.get(k)} |")
+    cache_hit_rate = metrics.get("cache_hit_rate", 0.0) or 0.0
+    if cache_hit_rate >= 0.3:
+        rows.append("")
+        rows.append(
+            f"> Note: latency_p50_ms is sub-millisecond because {cache_hit_rate * 100:.0f}% of requests "
+            f"are served from cache (no provider call). See the cache comparison table below for "
+            f"without-cache latency."
+        )
     return rows
 
 
@@ -134,8 +142,18 @@ def _chaos_table(metrics: dict) -> list[str]:
     }
     per_recovery = metrics.get("per_scenario_recovery_ms", {})
     for name, status in metrics.get("scenarios", {}).items():
+        recovery = per_recovery.get(name)
+        if recovery is None:
+            if name == "primary_timeout_100":
+                recovery_str = "n/a (circuit never recovers under 100% failure)"
+            elif name == "all_healthy":
+                recovery_str = "n/a (circuit never opened)"
+            else:
+                recovery_str = "n/a"
+        else:
+            recovery_str = f"{recovery:.1f}"
         rows.append(
-            f"| {name} | {expected.get(name, '(custom)')} | {status} | {per_recovery.get(name)} |"
+            f"| {name} | {expected.get(name, '(custom)')} | {status} | {recovery_str} |"
         )
     return rows
 
