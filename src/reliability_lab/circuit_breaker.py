@@ -20,12 +20,9 @@ class CircuitOpenError(RuntimeError):
 
 @dataclass(slots=True)
 class CircuitBreaker:
-    """Circuit breaker skeleton.
-
-    TODO(student): Implement a production-safe state machine:
-    - CLOSED: calls pass through; count failures.
-    - OPEN: fail fast until reset timeout elapses.
-    - HALF_OPEN: allow a probe; close on success or re-open on failure.
+    """Three-state circuit breaker: CLOSED counts failures; OPEN fails fast
+    until the reset timeout elapses; HALF_OPEN allows one probe and either
+    closes on success or immediately re-opens on failure.
     """
 
     name: str
@@ -81,13 +78,11 @@ class CircuitBreaker:
         self.success_count = 0
         if self.state == CircuitState.HALF_OPEN:
             self._transition(CircuitState.OPEN, "halfopen_probe_failed")
-            self.opened_at = time.monotonic()
             self.failure_count = 0
             return
         self.failure_count += 1
         if self.failure_count >= self.failure_threshold:
             self._transition(CircuitState.OPEN, "failure_threshold")
-            self.opened_at = time.monotonic()
             self.failure_count = 0
 
     def _transition(self, new_state: CircuitState, reason: str) -> None:
@@ -97,3 +92,5 @@ class CircuitBreaker:
             {"from": self.state.value, "to": new_state.value, "reason": reason, "ts": time.time()}
         )
         self.state = new_state
+        if new_state == CircuitState.OPEN:
+            self.opened_at = time.monotonic()

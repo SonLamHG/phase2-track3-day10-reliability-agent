@@ -30,7 +30,7 @@ def test_open_circuit_blocks_calls_without_invoking_function() -> None:
         except CircuitOpenError:
             fast_fails += 1
 
-    assert fast_fails == 10, "expected 10 CircuitOpenError, got %d" % fast_fails
+    assert fast_fails == 10, f"expected 10 CircuitOpenError, got {fast_fails}"
     assert calls["count"] == fail_threshold_calls, "provider should not be invoked while OPEN"
 
 
@@ -51,3 +51,15 @@ def test_failure_count_resets_after_halfopen_reopen() -> None:
     breaker.record_failure()
     assert breaker.state == CircuitState.OPEN
     assert breaker.failure_count == 0
+
+    # Probe success closes the breaker; subsequent CLOSED cycle must accumulate from 0.
+    assert breaker.allow_request() is True  # back to HALF_OPEN after timeout=0
+    breaker.record_success()
+    assert breaker.state == CircuitState.CLOSED
+
+    for _ in range(2):
+        breaker.record_failure()
+    assert breaker.failure_count == 2
+    assert breaker.state == CircuitState.CLOSED  # still under threshold
+    breaker.record_failure()
+    assert breaker.state == CircuitState.OPEN
