@@ -12,3 +12,6 @@ def test_gateway_returns_response_with_route_reason() -> None:
     assert result.text
     assert result.route in {"primary", "fallback", "cache_hit", "static_fallback"}
     assert result.route_reason, "gateway must populate route_reason"
+    assert result.route_reason.startswith(result.route), (
+        f"route_reason '{result.route_reason}' should start with route bucket '{result.route}'"
+    )

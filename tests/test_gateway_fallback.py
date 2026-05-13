@@ -27,4 +27,4 @@ def test_fallback_serves_when_primary_circuit_opens() -> None:
     last = gateway.complete("final")
     assert last.route == "fallback"
     assert last.provider == "backup"
-    assert "fallback:backup" in last.route_reason
+    assert "fallback:backup:skip:circuit_open:primary" in last.route_reason

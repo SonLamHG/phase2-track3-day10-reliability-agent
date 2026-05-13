@@ -4,7 +4,7 @@ import time
 from dataclasses import dataclass
 
 from reliability_lab.cache import ResponseCache, SharedRedisCache
-from reliability_lab.circuit_breaker import CircuitBreaker, CircuitOpenError
+from reliability_lab.circuit_breaker import CircuitBreaker
 from reliability_lab.providers import FakeLLMProvider, ProviderError, ProviderResponse
 
 
@@ -67,10 +67,6 @@ class ReliabilityGateway:
                 breaker.record_failure()
                 last_error = f"{provider.name}:{exc}"
                 causes.append(f"fail:{provider.name}")
-                continue
-            except CircuitOpenError as exc:
-                last_error = str(exc)
-                causes.append(f"skip:circuit_open:{provider.name}")
                 continue
 
             if self.cache is not None:
