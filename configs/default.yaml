@@ -9,7 +9,7 @@ providers:
     cost_per_1k_tokens: 0.006
 circuit_breaker:
   failure_threshold: 3
-  reset_timeout_seconds: 2
+  reset_timeout_seconds: 0.5
   success_threshold: 1
 cache:
   enabled: true
@@ -31,8 +31,10 @@ scenarios:
     provider_overrides:
       primary: 0.5
   - name: all_healthy
-    description: "Baseline — both providers healthy."
-    provider_overrides: {}
+    description: "Baseline — both providers healthy (zero fail rate)."
+    provider_overrides:
+      primary: 0.0
+      backup: 0.0
   - name: cache_stale_candidate
     description: "Different-year queries must not produce false cache hits."
     provider_overrides: {}
