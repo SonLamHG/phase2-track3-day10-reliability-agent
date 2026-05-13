@@ -182,14 +182,15 @@ class SharedRedisCache:
             best_score = 0.0
             best_query: str | None = None
             for key in self._redis.scan_iter(f"{self.prefix}*"):
-                cached_query = self._redis.hget(key, "query")
+                fields = self._redis.hgetall(key)
+                cached_query = fields.get("query")
                 if not cached_query:
                     continue
                 score = ResponseCache.similarity(query, cached_query)
                 if score > best_score:
                     best_score = score
                     best_query = cached_query
-                    best_value = self._redis.hget(key, "response")
+                    best_value = fields.get("response")
 
             if best_score >= self.similarity_threshold and best_query is not None:
                 if _looks_like_false_hit(query, best_query):
