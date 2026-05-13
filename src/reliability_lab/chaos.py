@@ -118,7 +118,12 @@ def run_scenario(
     return metrics, gateway, routes_seen
 
 
-def _scenario_passed(name: str, metrics: RunMetrics, routes_seen: set[str], false_hit_log: list) -> bool:
+def _scenario_passed(
+    name: str,
+    metrics: RunMetrics,
+    routes_seen: set[str],
+    false_hit_log: list[dict[str, object]],
+) -> bool:
     if name == "primary_timeout_100":
         return metrics.fallback_success_rate >= 0.9 and metrics.circuit_open_count >= 1
     if name == "primary_flaky_50":
@@ -160,7 +165,7 @@ def run_simulation(config: LabConfig, queries: list[str]) -> RunMetrics:
     for scenario in config.scenarios:
         result, gateway, routes_seen = run_scenario(config, queries, scenario)
 
-        false_hit_log: list = []
+        false_hit_log: list[dict[str, object]] = []
         if gateway.cache is not None and hasattr(gateway.cache, "false_hit_log"):
             false_hit_log = gateway.cache.false_hit_log
 

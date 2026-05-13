@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import random
 
-from reliability_lab.cache import ResponseCache
 from reliability_lab.circuit_breaker import CircuitBreaker
 from reliability_lab.gateway import ReliabilityGateway
 from reliability_lab.providers import FakeLLMProvider
