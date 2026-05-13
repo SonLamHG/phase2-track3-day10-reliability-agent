@@ -38,12 +38,12 @@ def _slo_table(metrics: dict) -> list[str]:
         "| SLI | SLO target | Actual | Met? |",
         "|---|---|---:|---|",
     ]
-    actuals = {
-        "availability": metrics.get("availability", 0.0),
-        "latency_p95_ms": metrics.get("latency_p95_ms", 0.0),
-        "fallback_success_rate": metrics.get("fallback_success_rate", 0.0),
-        "cache_hit_rate": metrics.get("cache_hit_rate", 0.0),
-        "recovery_time_ms": metrics.get("recovery_time_ms") or 0.0,
+    actuals: dict[str, float | None] = {
+        "availability": metrics.get("availability"),
+        "latency_p95_ms": metrics.get("latency_p95_ms"),
+        "fallback_success_rate": metrics.get("fallback_success_rate"),
+        "cache_hit_rate": metrics.get("cache_hit_rate"),
+        "recovery_time_ms": metrics.get("recovery_time_ms"),
     }
     comparisons = {
         "availability": (">=", lambda a, t: a >= t),
@@ -53,10 +53,15 @@ def _slo_table(metrics: dict) -> list[str]:
         "recovery_time_ms": ("<", lambda a, t: a < t),
     }
     for key, target in targets.items():
-        actual = actuals.get(key, 0.0)
+        actual = actuals.get(key)
         op, predicate = comparisons.get(key, (">=", lambda a, t: a >= t))
-        met = "PASS" if predicate(actual, target) else "FAIL"
-        rows.append(f"| {key} | {op} {target} | {actual} | {met} |")
+        if actual is None:
+            rendered_actual = "n/a"
+            met = "N/A"
+        else:
+            rendered_actual = str(actual)
+            met = "PASS" if predicate(actual, target) else "FAIL"
+        rows.append(f"| {key} | {op} {target} | {rendered_actual} | {met} |")
     return rows
 
 
@@ -98,9 +103,9 @@ def _metrics_table(metrics: dict) -> list[str]:
 
 
 def _cache_comparison_table(metrics: dict) -> list[str]:
-    cmp = metrics.get("cache_comparison", {})
-    off = cmp.get("without_cache", {})
-    on = cmp.get("with_cache", {})
+    comparison = metrics.get("cache_comparison", {})
+    off = comparison.get("without_cache", {})
+    on = comparison.get("with_cache", {})
     if not off or not on:
         return ["(cache comparison block not present - rerun `make run-chaos`)"]
 
