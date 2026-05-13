@@ -23,6 +23,8 @@ def test_privacy_query_is_not_cached() -> None:
 
 
 def test_cross_year_query_is_rejected_and_logged() -> None:
+    # Low threshold so the year-variant pair scores a hit; the false-hit
+    # guard (not the score) is what this test verifies.
     cache = ResponseCache(ttl_seconds=60, similarity_threshold=0.3)
     cache.set("Summarize refund policy for 2024 deadline", "Old policy")
     cached, _ = cache.get("Summarize refund policy for 2026 deadline")
@@ -39,3 +41,11 @@ def test_exact_match_returns_score_1() -> None:
     cached, score = cache.get("hello world")
     assert cached == "hi there"
     assert score == 1.0
+
+
+def test_similar_query_returns_semantic_score() -> None:
+    score = ResponseCache.similarity(
+        "what is a circuit breaker",
+        "what is circuit breaker pattern",
+    )
+    assert 0.5 < score < 1.0, f"expected semantic score in (0.5, 1.0), got {score}"

@@ -33,7 +33,7 @@ def _normalize_query(s: str) -> str:
 
 
 def _trigrams(s: str) -> set[str]:
-    s = f"  {s}  "
+    s = f" {s} "
     return {s[i : i + 3] for i in range(len(s) - 2)}
 
 
@@ -83,9 +83,10 @@ class ResponseCache:
 
         if best_score >= self.similarity_threshold and best_key is not None:
             if _looks_like_false_hit(query, best_key):
-                self.false_hit_log.append(
-                    {"query": query, "matched": best_key, "score": best_score}
-                )
+                if len(self.false_hit_log) < 500:
+                    self.false_hit_log.append(
+                        {"query": query, "matched": best_key, "score": best_score}
+                    )
                 return None, best_score
             return best_value, best_score
         return None, best_score
