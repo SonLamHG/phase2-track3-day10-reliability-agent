@@ -21,6 +21,10 @@ class RunMetrics(BaseModel):
     estimated_cost_saved: float = 0.0
     latencies_ms: list[float] = Field(default_factory=list)
     scenarios: dict[str, str] = Field(default_factory=dict)
+    per_scenario_recovery_ms: dict[str, float | None] = Field(default_factory=dict)
+    cache_comparison: dict[str, dict[str, object]] = Field(default_factory=dict)
+    false_hit_examples: list[dict[str, object]] = Field(default_factory=list)
+    slo_targets: dict[str, float] = Field(default_factory=dict)
 
     @property
     def availability(self) -> float:
@@ -54,9 +58,13 @@ class RunMetrics(BaseModel):
             "cache_hit_rate": round(self.cache_hit_rate, 4),
             "circuit_open_count": self.circuit_open_count,
             "recovery_time_ms": self.recovery_time_ms,
+            "per_scenario_recovery_ms": self.per_scenario_recovery_ms,
             "estimated_cost": round(self.estimated_cost, 6),
             "estimated_cost_saved": round(self.estimated_cost_saved, 6),
             "scenarios": self.scenarios,
+            "cache_comparison": self.cache_comparison,
+            "false_hit_examples": self.false_hit_examples,
+            "slo_targets": self.slo_targets,
         }
 
     def write_json(self, path: str | Path) -> None:
